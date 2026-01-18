@@ -13,12 +13,16 @@ app.post('/generate-pair-code', async (req, res) => {
   sock = makeWASocket({ auth: state })
 
   sock.ev.on('creds.update', saveCreds)
+
   sock.ev.on('connection.update', (update) => {
-    const { pairingCode } = update
+    const { pairingCode, connection } = update
     if (pairingCode) {
+      // Send pairing code back to frontend
       res.json({ pairCode: pairingCode })
+    }
+    if (connection === 'open') {
+      console.log('Bot connected ✅')
     }
   })
 })
-
 app.listen(3000, () => console.log('Knight Bot backend running on http://localhost:3000'))
