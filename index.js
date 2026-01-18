@@ -1,17 +1,24 @@
+const express = require('express')
+const path = require('path')
+const { makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys')
 
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
+const app = express()
+app.use(express.json())
+app.use(express.static(path.join(__dirname, 'public')))
 
-app.use(express.static('public'));
+let sock = null
 
-app.get('/code', (req, res) => {
-  const { number, type } = req.query;
-  if (!number || !type) {
-    return res.status(400).json({ message: "Missing parameters" });
-  }
-  const fakeCode = type === "file" ? "creds_123456789.json" : "eyJhbGciOiJIUzI1NiIsInR...";
-  res.json({ code: fakeCode });
-});
+app.post('/generate-pair-code', async (req, res) => {
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info')
+  sock = makeWASocket({ auth: state })
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  sock.ev.on('creds.update', saveCreds)
+  sock.ev.on('connection.update', (update) => {
+    const { pairingCode } = update
+    if (pairingCode) {
+      res.json({ pairCode: pairingCode })
+    }
+  })
+})
+
+app.listen(3000, () => console.log('Knight Bot backend running on http://localhost:3000'))
